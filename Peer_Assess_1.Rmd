@@ -1,0 +1,128 @@
+---
+title: "Peer Assessment 1"
+output: html_document
+---
+
+This is an R Markdown document. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+####Background
+
+It is now possible to collect a large amount of data about personal movement using activity monitoring devices such as a Fitbit, Nike Fuelband, or Jawbone Up. These type of devices are part of the “quantified self” movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. But these data remain under-utilized both because the raw data are hard to obtain and there is a lack of statistical methods and software for processing and interpreting the data.
+
+This assignment makes use of data from a personal activity monitoring device. This device collects data at 5 minute intervals through out the day. The data consists of two months of data from an anonymous individual collected during the months of October and November, 2012 and include the number of steps taken in 5 minute intervals each day.
+
+Read the data into a dataframe and attach the dataframe:
+
+```{r read_data, echo=TRUE}
+
+# Please be sure you set the working directory to where the activity.csv file exists
+
+peerdf <- read.csv("activity.csv")
+attach(peerdf)
+```
+
+Calculations for Total Steps per Day and Histogram.
+Total Steps Per Day, Mean of Total Steps/Day, Median of Total Steps/Day
+
+```{r firstcalcs, echo=TRUE}
+tstepsday <- tapply(steps, date, sum, na.rm=TRUE)
+m1tstepsday <- mean(tstepsday)
+m2tstepsday <- median(tstepsday)
+
+hist(tstepsday, main="Histogram of Total Steps Per Day", xlab="Steps Per Day")
+```
+
+#####The mean of the total steps per day = `r format(m1tstepsday, digits=6)`
+#####The median of the total steps per day = `r m2tstepsday`
+
+Calculation for total steps per interval (averaged across all days):
+```{r intervals, echo=TRUE}
+mstepsinterval <- tapply(steps, interval, mean, na.rm=TRUE)
+maxmeanindex <- which.max(mstepsinterval)
+valmax <- mstepsinterval[maxmeanindex]
+missing <- nrow(peerdf) - sum(complete.cases(peerdf))
+showmax <- paste("Interval", as.character(maxmeanindex), "Steps ", as.character(round(valmax)), sep=" ")
+detach(peerdf)
+
+plot(mstepsinterval, type="l", main="Average Daily Activity Pattern", ylab="Mean Steps", xlab="5 Minute Interval Number")
+text(maxmeanindex, valmax, showmax)
+```
+
+##### As denoted on the plot, the maximum value occurred in Interval `r maxmeanindex`
+##### The maximum of the average steps (rounded) was `r round(valmax)`
+
+#### Missing Values
+
+#####The number of rows with missing values is `r missing`
+
+To handle the missing values, a new dataset is created that is equal to the original dataset but the missing values have been filled in.  The strategy for filling in all of the missing values is to use the the mean for that 5-minute interval.  Using the new dataset, a histogram is presented of the total number of steps taken each day.
+
+```{r newdataset, echo=TRUE}
+
+library(reshape2)
+temp <- melt(mstepsinterval, varnames="interval", value.name="intmean")
+
+mergedf <- merge(peerdf, temp, by="interval")
+
+for (i in 1:nrow(mergedf)) {
+  if (is.na(mergedf$steps[i]) == TRUE) {
+    mergedf$steps[i] <- mergedf$intmean[i]
+  }
+}
+
+## Make a histogram of the total number of steps taken each day.  Calculate the mean and median total number of steps taken per day.
+attach(mergedf)
+tstepsday2 <- tapply(steps, date, sum, na.rm=TRUE) ##should not be any NA
+m1tstepsday2 <- mean(tstepsday2)
+m2tstepsday2 <- median(tstepsday2)
+detach(mergedf)
+
+## Calculations for the differences from the original analysis
+diffsumpc <- (sum(tstepsday2)-sum(tstepsday))/ sum(tstepsday) * 100
+diffmeanpc <- (m1tstepsday2 - m1tstepsday)/ m1tstepsday * 100
+diffmedpc <- (m2tstepsday2 - m2tstepsday)/ m2tstepsday * 100
+
+hist(tstepsday2, main="Histogram of Total Steps Per Day", xlab="Steps Per Day (NA's Adjusted)")
+```
+
+
+#####The adjusted mean of the total steps per day = `r format(m1tstepsday2, digits=7)`
+#####The adjusted median of the total steps per day = `r format(m2tstepsday2, digits=5)`
+
+The adjusted mean and median differ from the estimates with the NA values excluded.  Substituting the mean of the interval period that corresponds to the NA values results in the mean and median increasing.   
+
+The difference in the adjusted mean and the original mean of the total steps per day = `r round(m1tstepsday2 - m1tstepsday)` steps or `r  format(diffmeanpc, digits=4)` %.  
+The difference in the adjusted median and the original median of the total steps per day = `r round(m2tstepsday2 - m2tstepsday)` steps or `r format(diffmedpc, digits=4)` %.  
+
+####Differences between activity patterns duing weekdays and weekends
+
+```{r weeksplit, echo=TRUE}
+# Create day of week in numeric format, easier to work with (0=Sunday)
+mergedf$wd <- as.POSIXlt(mergedf$date,format="%Y-%m-%d")$wday
+mergedf$wdy <- as.factor(mergedf$wd >= 1 & mergedf$wd <= 5)
+
+# Recalculate mean for each interval based on weekday/weekend groups
+splitdf <- split(mergedf, mergedf$wdy)
+meanswe <- with(splitdf[[1]], tapply(steps, interval, mean)) #weekend
+meanswd <- with(splitdf[[2]], tapply(steps, interval, mean)) #weekday
+
+# Merge df's back with new interval means for weekend
+temp1 <- melt(meanswe, varnames="interval", value.name="intmeannew")
+tempdf1 <- merge(splitdf[[1]], temp1, by="interval")
+
+# Merge df's back with new interval means for weekday
+temp2 <- melt(meanswd, varnames="interval", value.name="intmeannew")
+tempdf2 <- merge(splitdf[[2]], temp2, by="interval")
+
+resultdf <- rbind(tempdf1, tempdf2) 
+levels(resultdf$wdy)[levels(resultdf$wdy)=="TRUE"] <- "Weekdays"
+levels(resultdf$wdy)[levels(resultdf$wdy)=="FALSE"] <- "Weekends"
+
+library(ggplot2)
+ggplot(resultdf, aes(interval, intmeannew)) +
+  geom_line(color="darkgoldenrod4") + 
+  facet_grid(wdy ~ .) +
+  ggtitle("Comparison of Activity Levels for Weekends vs. Weekdays") + 
+  xlab("Daily 5 Minute Intervals") +
+  ylab("Mean Steps")
+```
