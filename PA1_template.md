@@ -1,9 +1,4 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 ## Loading and preprocessing the data
@@ -16,12 +11,11 @@ This assignment makes use of data from a personal activity monitoring device. Th
 
 Read the data into a dataframe and attach the dataframe:
 
-```{r read_data, echo=TRUE}
 
+```r
 # Please be sure you set the working directory to where the activity.csv file exists
 
 peerdf <- read.csv("activity.csv")
-
 ```
 
 
@@ -30,8 +24,8 @@ peerdf <- read.csv("activity.csv")
 Calculations for Total Steps per Day and Histogram.
 Total Steps Per Day, Mean of Total Steps/Day, Median of Total Steps/Day
 
-```{r firstcalcs, echo=TRUE}
 
+```r
 tstepsday <- tapply(peerdf$steps, peerdf$date, sum, na.rm=TRUE)
 m1tstepsday <- mean(tstepsday)
 m2tstepsday <- median(tstepsday)
@@ -39,14 +33,17 @@ m2tstepsday <- median(tstepsday)
 hist(tstepsday, main="Histogram of Total Steps Per Day", xlab="Steps Per Day")
 ```
 
-#####The mean of the total steps per day = `r format(m1tstepsday, digits=6)`
-#####The median of the total steps per day = `r m2tstepsday`
+![](PA1_template_files/figure-html/firstcalcs-1.png) 
+
+#####The mean of the total steps per day = 9354.23
+#####The median of the total steps per day = 10395
 
 
 ## What is the average daily activity pattern?
 
 Calculation for total steps per interval (averaged across all days):
-```{r intervals, echo=TRUE}
+
+```r
 mstepsinterval <- tapply(peerdf$steps, peerdf$interval, mean, na.rm=TRUE)
 maxmeanindex <- which.max(mstepsinterval)
 valmax <- mstepsinterval[maxmeanindex]
@@ -57,18 +54,20 @@ plot(mstepsinterval, type="l", main="Average Daily Activity Pattern", ylab="Mean
 text(maxmeanindex, valmax, showmax)
 ```
 
-##### As denoted on the plot, the maximum value occurred in Interval `r maxmeanindex`
-##### The maximum of the average steps (rounded) was `r round(valmax)`
+![](PA1_template_files/figure-html/intervals-1.png) 
+
+##### As denoted on the plot, the maximum value occurred in Interval 104
+##### The maximum of the average steps (rounded) was 206
 
 
 ## Imputing missing values
 
-#####The number of rows with missing values is `r missing`
+#####The number of rows with missing values is 2304
 
 To handle the missing values, a new dataset is created that is equal to the original dataset but the missing values have been filled in.  The strategy for filling in all of the missing values is to use the the mean for that 5-minute interval.  Using the new dataset, a histogram is presented of the total number of steps taken each day.
 
-```{r newdataset, echo=TRUE}
 
+```r
 library(reshape2)
 temp <- melt(mstepsinterval, varnames="interval", value.name="intmean")
 
@@ -94,19 +93,22 @@ diffmedpc <- (m2tstepsday2 - m2tstepsday)/ m2tstepsday * 100
 hist(tstepsday2, main="Histogram of Total Steps Per Day", xlab="Steps Per Day (NA's Adjusted)")
 ```
 
+![](PA1_template_files/figure-html/newdataset-1.png) 
 
-#####The adjusted mean of the total steps per day = `r format(m1tstepsday2, digits=7)`
-#####The adjusted median of the total steps per day = `r format(m2tstepsday2, digits=5)`
+
+#####The adjusted mean of the total steps per day = 10766.19
+#####The adjusted median of the total steps per day = 10766
 
 The adjusted mean and median differ from the estimates with the NA values excluded.  Substituting the mean of the interval period that corresponds to the NA values results in the mean and median increasing.   
 
-The difference in the adjusted mean and the original mean of the total steps per day = `r round(m1tstepsday2 - m1tstepsday)` steps or `r  format(diffmeanpc, digits=4)` %.  
-The difference in the adjusted median and the original median of the total steps per day = `r round(m2tstepsday2 - m2tstepsday)` steps or `r format(diffmedpc, digits=4)` %.  
+The difference in the adjusted mean and the original mean of the total steps per day = 1412 steps or 15.09 %.  
+The difference in the adjusted median and the original median of the total steps per day = 371 steps or 3.571 %.  
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
-```{r weeksplit, echo=TRUE}
+
+```r
 # Create day of week in numeric format, easier to work with (0=Sunday)
 mergedf$wd <- as.POSIXlt(mergedf$date,format="%Y-%m-%d")$wday
 mergedf$wdy <- as.factor(mergedf$wd >= 1 & mergedf$wd <= 5)
@@ -136,3 +138,5 @@ ggplot(resultdf, aes(interval, intmeannew)) +
   xlab("Daily 5 Minute Intervals") +
   ylab("Mean Steps")
 ```
+
+![](PA1_template_files/figure-html/weeksplit-1.png) 
